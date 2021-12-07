@@ -9,3 +9,5 @@ ExternalProject_Add(
 )
 
 ADD_SUBDIRECTORY(cJsonDemo)
+set(CUNIT_CMAKE_INSTALL yes)
+ADD_SUBDIRECTORY(CUnit)

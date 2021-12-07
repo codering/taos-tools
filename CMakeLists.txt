@@ -75,8 +75,10 @@ ENDIF()
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/build/bin)
 
+enable_testing()
 ADD_SUBDIRECTORY(deps)
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(test)
 
 ADD_DEPENDENCIES(taosdump apache-avro)
 ADD_DEPENDENCIES(taosBenchmark cJsonDemo)
