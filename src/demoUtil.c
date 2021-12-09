@@ -260,7 +260,8 @@ int getChildNameOfSuperTableWithLimitAndOffset(TAOS *taos, char *dbName,
                 taos_close(taos);
                 errorPrint(
                     "realloc fail for save child table name of "
-                    "%s.%s\n", dbName, stbName);
+                    "%s.%s\n",
+                    dbName, stbName);
                 return -1;
             }
         }

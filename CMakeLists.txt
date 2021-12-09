@@ -75,13 +75,22 @@ ENDIF()
 
 SET(EXECUTABLE_OUTPUT_PATH ${CMAKE_BINARY_DIR}/build/bin)
 
-enable_testing()
+
 ADD_SUBDIRECTORY(deps)
 ADD_SUBDIRECTORY(src)
-ADD_SUBDIRECTORY(test)
+
+if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
+    MESSAGE("${Yellow} CUnit on ${ColourReset}")
+    enable_testing()
+    ADD_SUBDIRECTORY(test)
+else()
+    MESSAGE("${Green} Cunit off ${ColourReset}")
+endif ()
+
 
 ADD_DEPENDENCIES(taosdump apache-avro)
 ADD_DEPENDENCIES(taosBenchmark cJsonDemo)
+ADD_DEPENDENCIES(taosdemoTest cJsonDemo)
 
 SET(MAKE_INSTALL_SH "${PROJECT_SOURCE_DIR}/packaging/tools/make_install.sh")
 INSTALL(CODE "execute_process(COMMAND bash ${MAKE_INSTALL_SH} ${CMAKE_BINARY_DIR})")

@@ -1,94 +1,84 @@
 /*
- *  Simple example of a CUnit unit test.
+ * Copyright (c) 2019 TAOS Data, Inc. <jhtao@taosdata.com>
  *
- *  This program (crudely) demonstrates a very simple "black box"
- *  test of the standard library functions fprintf() and fread().
- *  It uses suite initialization and cleanup functions to open
- *  and close a common temporary file used by the test functions.
- *  The test functions then write to and read from the temporary
- *  file in the course of testing the library functions.
+ * This program is free software: you can use, redistribute, and/or modify
+ * it under the terms of the MIT license as published by the Free Software
+ * Foundation.
  *
- *  The 2 test functions are added to a single CUnit suite, and
- *  then run using the CUnit Basic interface.  The output of the
- *  program (on CUnit version 2.0-2) is:
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.
  *
- *           CUnit : A Unit testing framework for C.
- *           http://cunit.sourceforge.net/
- *
- *       Suite: Suite_1
- *         Test: test of fprintf() ... passed
- *         Test: test of fread() ... passed
- *
- *       --Run Summary: Type      Total     Ran  Passed  Failed
- *                      suites        1       1     n/a       0
- *                      tests         2       2       2       0
- *                      asserts       5       5       5       0
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <stdio.h>
 #include <string.h>
+#include "../inc/demo.h"
 #include "CUnit/Basic.h"
 
-/* Pointer to the file used by the tests. */
-static FILE* temp_file = NULL;
-
-/* The suite initialization function.
- * Opens the temporary file used by the tests.
- * Returns zero on success, non-zero otherwise.
- */
-int init_suite1(void) {
-    if (NULL == (temp_file = fopen("temp.txt", "w+"))) {
-        return -1;
-    } else {
-        return 0;
-    }
+SArguments test_g_args;
+int        init_suite1(void) {
+    test_g_args.metaFile = DEFAULT_METAFILE;
+    test_g_args.test_mode = DEFAULT_TEST_MODE;
+    test_g_args.host = DEFAULT_HOST;
+    test_g_args.port = DEFAULT_PORT;
+    test_g_args.iface = DEFAULT_IFACE;
+    test_g_args.user = TSDB_DEFAULT_USER;
+    strcpy(test_g_args.password, TSDB_DEFAULT_PASS);
+    test_g_args.database = DEFAULT_DATABASE;
+    test_g_args.replica = DEFAULT_REPLICA;
+    test_g_args.tb_prefix = DEFAULT_TB_PREFIX;
+    test_g_args.escapeChar = DEFAULT_ESCAPE_CHAR;
+    test_g_args.sqlFile = DEFAULT_SQLFILE;
+    test_g_args.use_metric = DEFAULT_USE_METRIC;
+    test_g_args.drop_database = DEFAULT_DROP_DB;
+    test_g_args.aggr_func = DEFAULT_AGGR_FUNC;
+    test_g_args.debug_print = DEFAULT_DEBUG;
+    test_g_args.verbose_print = DEFAULT_VERBOSE;
+    test_g_args.performance_print = DEFAULT_PERF_STAT;
+    test_g_args.answer_yes = DEFAULT_ANS_YES;
+    test_g_args.output_file = DEFAULT_OUTPUT;
+    test_g_args.async_mode = DEFAULT_SYNC_MODE;
+    test_g_args.data_type[0] = TSDB_DATA_TYPE_FLOAT;
+    test_g_args.data_type[1] = TSDB_DATA_TYPE_INT;
+    test_g_args.data_type[2] = TSDB_DATA_TYPE_FLOAT;
+    strcpy(test_g_args.dataType[0], "FLOAT");
+    strcpy(test_g_args.dataType[1], "INT");
+    strcpy(test_g_args.dataType[2], "FLOAT");
+    test_g_args.data_length[0] = 4;
+    test_g_args.data_length[1] = 4;
+    test_g_args.data_length[2] = 4;
+    test_g_args.binwidth = DEFAULT_BINWIDTH;
+    test_g_args.columnCount = DEFAULT_COL_COUNT;
+    test_g_args.lenOfOneRow = DEFAULT_LEN_ONE_ROW;
+    test_g_args.nthreads = DEFAULT_NTHREADS;
+    test_g_args.insert_interval = DEFAULT_INSERT_INTERVAL;
+    test_g_args.timestamp_step = DEFAULT_TIMESTAMP_STEP;
+    test_g_args.query_times = DEFAULT_QUERY_TIME;
+    test_g_args.prepared_rand = DEFAULT_PREPARED_RAND;
+    test_g_args.interlaceRows = DEFAULT_INTERLACE_ROWS;
+    test_g_args.reqPerReq = DEFAULT_REQ_PER_REQ;
+    test_g_args.max_sql_len = TSDB_MAX_ALLOWED_SQL_LEN;
+    test_g_args.ntables = DEFAULT_CHILDTABLES;
+    test_g_args.insertRows = DEFAULT_INSERT_ROWS;
+    test_g_args.abort = DEFAULT_ABORT;
+    test_g_args.disorderRatio = DEFAULT_RATIO;
+    test_g_args.disorderRange = DEFAULT_DISORDER_RANGE;
+    test_g_args.method_of_delete = DEFAULT_METHOD_DEL;
+    test_g_args.totalInsertRows = DEFAULT_TOTAL_INSERT;
+    test_g_args.totalAffectedRows = DEFAULT_TOTAL_AFFECT;
+    test_g_args.demo_mode = DEFAULT_DEMO_MODE;
+    test_g_args.chinese = DEFAULT_CHINESE_OPT;
+    test_g_args.pressure_mode = DEFAULT_PRESSURE_MODE;
+}
+int  clean_suite1(void) { return 0; }
+void testPARSE_ARGS(void) {
+    char* args[2] = {"taosdemo", "-E"};
+    CU_ASSERT_EQUAL(parse_args(2, args, &test_g_args), 0)
 }
 
-/* The suite cleanup function.
- * Closes the temporary file used by the tests.
- * Returns zero on success, non-zero otherwise.
- */
-int clean_suite1(void) {
-    if (0 != fclose(temp_file)) {
-        return -1;
-    } else {
-        temp_file = NULL;
-        return 0;
-    }
-}
-
-/* Simple test of fprintf().
- * Writes test data to the temporary file and checks
- * whether the expected number of bytes were written.
- */
-void testFPRINTF(void) {
-    int i1 = 10;
-
-    if (NULL != temp_file) {
-        CU_ASSERT(1 == fprintf(temp_file, "Q\n"));
-        CU_ASSERT(7 == fprintf(temp_file, "i1 = %d", i1));
-    }
-}
-
-/* Simple test of fread().
- * Reads the data previously written by testFPRINTF()
- * and checks whether the expected characters are present.
- * Must be run after testFPRINTF().
- */
-void testFREAD(void) {
-    unsigned char buffer[20];
-
-    if (NULL != temp_file) {
-        rewind(temp_file);
-        CU_ASSERT(9 == fread(buffer, sizeof(unsigned char), 20, temp_file));
-        CU_ASSERT(0 == strncmp(buffer, "Q\ni1 = 10", 9));
-    }
-}
-
-/* The main() function for setting up and running the tests.
- * Returns a CUE_SUCCESS on successful running, another
- * CUnit error code on failure.
- */
 int main() {
     CU_pSuite pSuite = NULL;
 
@@ -96,7 +86,7 @@ int main() {
     if (CUE_SUCCESS != CU_initialize_registry()) return CU_get_error();
 
     /* add a suite to the registry */
-    pSuite = CU_add_suite("Suite_1", init_suite1, clean_suite1);
+    pSuite = CU_add_suite("demoCommandOpt.c", init_suite1, clean_suite1);
     if (NULL == pSuite) {
         CU_cleanup_registry();
         return CU_get_error();
@@ -104,8 +94,7 @@ int main() {
 
     /* add the tests to the suite */
     /* NOTE - ORDER IS IMPORTANT - MUST TEST fread() AFTER fprintf() */
-    if ((NULL == CU_add_test(pSuite, "test of fprintf()", testFPRINTF)) ||
-        (NULL == CU_add_test(pSuite, "test of fread()", testFREAD))) {
+    if ((NULL == CU_add_test(pSuite, "test of parse_args()", testPARSE_ARGS))) {
         CU_cleanup_registry();
         return CU_get_error();
     }
