@@ -1,0 +1,1 @@
+/usr/bin/cc -g  -rdynamic CMakeFiles/taosdemoTest.dir/test.c.o  -o ../build/bin/taosdemoTest  -Wl,-rpath,/home/parallels/Documents/TDengine/src/kit/taos-tools/build/src ../deps/CUnit/libcunit.a -ltaos -lpthread ../deps/cJsonDemo/libcJsonDemo.a ../src/libtaosdemo.so -ltaos -lpthread ../deps/cJsonDemo/libcJsonDemo.a -fsanitize=address 

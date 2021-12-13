@@ -27,6 +27,74 @@ char *g_aggreFuncDemo[] = {"*",
 char *g_aggreFunc[] = {"*",       "count(*)", "avg(C0)",   "sum(C0)",
                        "max(C0)", "min(C0)",  "first(C0)", "last(C0)"};
 
+void init_g_args(SArguments *pg_args) {
+    pg_args->metaFile = DEFAULT_METAFILE;
+    pg_args->test_mode = DEFAULT_TEST_MODE;
+    pg_args->host = DEFAULT_HOST;
+    pg_args->port = DEFAULT_PORT;
+    pg_args->iface = DEFAULT_IFACE;
+    pg_args->user = TSDB_DEFAULT_USER;
+    strcpy(pg_args->password, TSDB_DEFAULT_PASS);
+    pg_args->database = DEFAULT_DATABASE;
+    pg_args->replica = DEFAULT_REPLICA;
+    pg_args->tb_prefix = DEFAULT_TB_PREFIX;
+    pg_args->escapeChar = DEFAULT_ESCAPE_CHAR;
+    pg_args->sqlFile = DEFAULT_SQLFILE;
+    pg_args->use_metric = DEFAULT_USE_METRIC;
+    pg_args->drop_database = DEFAULT_DROP_DB;
+    pg_args->aggr_func = DEFAULT_AGGR_FUNC;
+    pg_args->debug_print = DEFAULT_DEBUG;
+    pg_args->verbose_print = DEFAULT_VERBOSE;
+    pg_args->performance_print = DEFAULT_PERF_STAT;
+    pg_args->answer_yes = DEFAULT_ANS_YES;
+    pg_args->output_file = DEFAULT_OUTPUT;
+    pg_args->async_mode = DEFAULT_SYNC_MODE;
+    pg_args->data_type[0] = TSDB_DATA_TYPE_FLOAT;
+    pg_args->data_type[1] = TSDB_DATA_TYPE_INT;
+    pg_args->data_type[2] = TSDB_DATA_TYPE_FLOAT;
+    pg_args->dataType = calloc(4096, sizeof(char *));
+    for (int i = 0; i < 4096; ++i) {
+        pg_args->dataType[i] = calloc(1, DATATYPE_BUFF_LEN);
+    }
+    strcpy(pg_args->dataType[0], "FLOAT");
+    strcpy(pg_args->dataType[1], "INT");
+    strcpy(pg_args->dataType[2], "FLOAT");
+    pg_args->data_length = calloc(4096, sizeof(int32_t));
+    pg_args->data_length[0] = 4;
+    pg_args->data_length[1] = 4;
+    pg_args->data_length[2] = 4;
+    pg_args->binwidth = DEFAULT_BINWIDTH;
+    pg_args->columnCount = DEFAULT_COL_COUNT;
+    pg_args->lenOfOneRow = DEFAULT_LEN_ONE_ROW;
+    pg_args->nthreads = DEFAULT_NTHREADS;
+    pg_args->insert_interval = DEFAULT_INSERT_INTERVAL;
+    pg_args->timestamp_step = DEFAULT_TIMESTAMP_STEP;
+    pg_args->query_times = DEFAULT_QUERY_TIME;
+    pg_args->prepared_rand = DEFAULT_PREPARED_RAND;
+    pg_args->interlaceRows = DEFAULT_INTERLACE_ROWS;
+    pg_args->reqPerReq = DEFAULT_REQ_PER_REQ;
+    pg_args->max_sql_len = TSDB_MAX_ALLOWED_SQL_LEN;
+    pg_args->ntables = DEFAULT_CHILDTABLES;
+    pg_args->insertRows = DEFAULT_INSERT_ROWS;
+    pg_args->abort = DEFAULT_ABORT;
+    pg_args->disorderRatio = DEFAULT_RATIO;
+    pg_args->disorderRange = DEFAULT_DISORDER_RANGE;
+    pg_args->method_of_delete = DEFAULT_METHOD_DEL;
+    pg_args->totalInsertRows = DEFAULT_TOTAL_INSERT;
+    pg_args->totalAffectedRows = DEFAULT_TOTAL_AFFECT;
+    pg_args->demo_mode = DEFAULT_DEMO_MODE;
+    pg_args->chinese = DEFAULT_CHINESE_OPT;
+    pg_args->pressure_mode = DEFAULT_PRESSURE_MODE;
+}
+
+void clean_g_args(SArguments *pg_args) {
+    for (int i = 0; i < 4096; ++i) {
+        tmfree(pg_args->dataType[i]);
+    }
+    tmfree(pg_args->dataType);
+    tmfree(pg_args->data_length);
+}
+
 int parse_args(int argc, char *argv[], SArguments *pg_args) {
     int32_t code = -1;
     for (int i = 1; i < argc; i++) {
@@ -1194,21 +1262,8 @@ int parse_args(int argc, char *argv[], SArguments *pg_args) {
         }
     }
 
-    int columnCount;
-    for (columnCount = 0; columnCount < MAX_NUM_COLUMNS; columnCount++) {
-        if (pg_args->dataType[columnCount] == NULL) {
-            break;
-        }
-    }
-
-    if (0 == columnCount) {
-        errorPrint("%s", "data type error!\n");
-        goto end_parse_command;
-    }
-    pg_args->columnCount = columnCount;
-
     pg_args->lenOfOneRow = TIMESTAMP_BUFF_LEN;  // timestamp
-    for (int c = 0; c < pg_args->columnCount; c++) {
+    for (int c = 0; c < pg_args->columnCount - 1; c++) {
         switch (pg_args->data_type[c]) {
             case TSDB_DATA_TYPE_BINARY:
                 pg_args->lenOfOneRow += pg_args->binwidth + 3;
@@ -1255,7 +1310,8 @@ int parse_args(int argc, char *argv[], SArguments *pg_args) {
                 break;
 
             default:
-                errorPrint("get error data type : %s\n", pg_args->dataType[c]);
+                errorPrint("get error data type for column %d: %s\n", c,
+                           pg_args->dataType[c]);
                 goto end_parse_command;
         }
     }
@@ -1530,28 +1586,30 @@ void setParaFromArg(SArguments *pg_args) {
     }
 }
 
-int querySqlFile(TAOS *taos, char *sqlFile) {
+int querySqlFile(SArguments *pg_args, char *sqlFile) {
     int32_t code = -1;
     FILE *  fp = fopen(sqlFile, "r");
-    char *  cmd;
+    char *  cmd = calloc(1, TSDB_MAX_BYTES_PER_ROW);
     int     read_len = 0;
     size_t  cmd_len = 0;
     char *  line = NULL;
     size_t  line_len = 0;
+    TAOS *  taos = taos_connect(pg_args->host, pg_args->user, pg_args->password,
+                              NULL, pg_args->port);
+    if (taos == NULL) {
+        errorPrint("failed to connect to tdengine, reason: %s",
+                   taos_errstr(NULL));
+        return -1;
+    }
     if (fp == NULL) {
         errorPrint("failed to open file %s, reason:%s\n", sqlFile,
                    strerror(errno));
         goto free_of_query_sql_file;
     }
-    cmd = calloc(1, TSDB_MAX_BYTES_PER_ROW);
-    if (cmd == NULL) {
-        errorPrint("%s", "failde to allocate memory\n");
-        goto free_of_query_sql_file;
-    }
     double t = (double)taosGetTimestampMs();
     while ((read_len = getline(&line, &line_len, fp)) != -1) {
         if (read_len >= TSDB_MAX_BYTES_PER_ROW) continue;
-        line[--read_len] = '\0';
+        line[read_len] = '\0';
 
         if (read_len == 0 || isCommentLine(line)) {  // line starts with #
             continue;
@@ -1577,6 +1635,7 @@ int querySqlFile(TAOS *taos, char *sqlFile) {
     printf("run %s took %.6f second(s)\n\n", sqlFile, t / 1000000);
     code = 0;
 free_of_query_sql_file:
+    taos_close(taos);
     tmfree(cmd);
     tmfree(line);
     tmfclose(fp);

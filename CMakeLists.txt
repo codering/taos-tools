@@ -83,14 +83,13 @@ if (${CMAKE_BUILD_TYPE} MATCHES "Debug")
     MESSAGE("${Yellow} CUnit on ${ColourReset}")
     enable_testing()
     ADD_SUBDIRECTORY(test)
+    add_test(NAME taosdemoTest COMMAND taosdemoTest)
 else()
     MESSAGE("${Green} Cunit off ${ColourReset}")
 endif ()
 
 
 ADD_DEPENDENCIES(taosdump apache-avro)
-ADD_DEPENDENCIES(taosBenchmark cJsonDemo)
-ADD_DEPENDENCIES(taosdemoTest cJsonDemo)
 
 SET(MAKE_INSTALL_SH "${PROJECT_SOURCE_DIR}/packaging/tools/make_install.sh")
 INSTALL(CODE "execute_process(COMMAND bash ${MAKE_INSTALL_SH} ${CMAKE_BINARY_DIR})")

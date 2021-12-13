@@ -66,8 +66,6 @@
 #define RESP_BUF_LEN 4096
 #define SQL_BUFF_LEN 1024
 
-extern char configDir[];
-
 #define STR_INSERT_INTO "INSERT INTO "
 
 #define MAX_RECORDS_PER_REQ 32766
@@ -320,8 +318,8 @@ typedef struct SArguments_S {
     char *   output_file;
     bool     async_mode;
     char     data_type[MAX_NUM_COLUMNS + 1];
-    char *   dataType[MAX_NUM_COLUMNS + 1];
-    int32_t  data_length[MAX_NUM_COLUMNS + 1];
+    char **  dataType;
+    int32_t *data_length;
     uint32_t binwidth;
     uint32_t columnCount;
     uint64_t lenOfOneRow;
@@ -599,6 +597,7 @@ extern int64_t        g_actualChildTables;
 extern SQueryMetaInfo g_queryInfo;
 extern FILE *         g_fpOfInsertResult;
 extern bool           g_fail;
+extern char           configDir[];
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define tstrncpy(dst, src, size)       \
@@ -608,10 +607,12 @@ extern bool           g_fail;
     } while (0)
 /* ************ Function declares ************  */
 /* demoCommandOpt.c */
+void init_g_args(SArguments *pg_args);
 int  parse_args(int argc, char *argv[], SArguments *pg_args);
 void setParaFromArg(SArguments *pg_args);
-int  querySqlFile(TAOS *taos, char *sqlFile);
+int  querySqlFile(SArguments *pg_args, char *sqlFile);
 void testCmdLine(SArguments *pg_args);
+void clean_g_args(SArguments *pg_args);
 /* demoJsonOpt.c */
 int getInfoFromJsonFile(char *file);
 int testMetaFile();

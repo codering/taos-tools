@@ -1161,6 +1161,7 @@ void postFreeResource() {
         }
     }
     tmfree(g_sampleBindBatchArray);
+    clean_g_args(&g_args);
 }
 
 static int32_t execInsert(threadInfo *pThreadInfo, uint32_t k) {
