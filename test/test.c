@@ -15,86 +15,95 @@
 
 #include <stdio.h>
 #include <string.h>
-#include "../inc/demo.h"
+#include <unistd.h>
 #include "CUnit/Basic.h"
+#include "demo.h"
 
+#define MAX_DESCRIPTION_LEN 1024
 SArguments test_g_args;
-int        init_suite1(void) {
-    test_g_args.metaFile = DEFAULT_METAFILE;
-    test_g_args.test_mode = DEFAULT_TEST_MODE;
-    test_g_args.host = DEFAULT_HOST;
-    test_g_args.port = DEFAULT_PORT;
-    test_g_args.iface = DEFAULT_IFACE;
-    test_g_args.user = TSDB_DEFAULT_USER;
-    strcpy(test_g_args.password, TSDB_DEFAULT_PASS);
-    test_g_args.database = DEFAULT_DATABASE;
-    test_g_args.replica = DEFAULT_REPLICA;
-    test_g_args.tb_prefix = DEFAULT_TB_PREFIX;
-    test_g_args.escapeChar = DEFAULT_ESCAPE_CHAR;
-    test_g_args.sqlFile = DEFAULT_SQLFILE;
-    test_g_args.use_metric = DEFAULT_USE_METRIC;
-    test_g_args.drop_database = DEFAULT_DROP_DB;
-    test_g_args.aggr_func = DEFAULT_AGGR_FUNC;
-    test_g_args.debug_print = DEFAULT_DEBUG;
-    test_g_args.verbose_print = DEFAULT_VERBOSE;
-    test_g_args.performance_print = DEFAULT_PERF_STAT;
-    test_g_args.answer_yes = DEFAULT_ANS_YES;
-    test_g_args.output_file = DEFAULT_OUTPUT;
-    test_g_args.async_mode = DEFAULT_SYNC_MODE;
-    test_g_args.data_type[0] = TSDB_DATA_TYPE_FLOAT;
-    test_g_args.data_type[1] = TSDB_DATA_TYPE_INT;
-    test_g_args.data_type[2] = TSDB_DATA_TYPE_FLOAT;
-    strcpy(test_g_args.dataType[0], "FLOAT");
-    strcpy(test_g_args.dataType[1], "INT");
-    strcpy(test_g_args.dataType[2], "FLOAT");
-    test_g_args.data_length[0] = 4;
-    test_g_args.data_length[1] = 4;
-    test_g_args.data_length[2] = 4;
-    test_g_args.binwidth = DEFAULT_BINWIDTH;
-    test_g_args.columnCount = DEFAULT_COL_COUNT;
-    test_g_args.lenOfOneRow = DEFAULT_LEN_ONE_ROW;
-    test_g_args.nthreads = DEFAULT_NTHREADS;
-    test_g_args.insert_interval = DEFAULT_INSERT_INTERVAL;
-    test_g_args.timestamp_step = DEFAULT_TIMESTAMP_STEP;
-    test_g_args.query_times = DEFAULT_QUERY_TIME;
-    test_g_args.prepared_rand = DEFAULT_PREPARED_RAND;
-    test_g_args.interlaceRows = DEFAULT_INTERLACE_ROWS;
-    test_g_args.reqPerReq = DEFAULT_REQ_PER_REQ;
-    test_g_args.max_sql_len = TSDB_MAX_ALLOWED_SQL_LEN;
-    test_g_args.ntables = DEFAULT_CHILDTABLES;
-    test_g_args.insertRows = DEFAULT_INSERT_ROWS;
-    test_g_args.abort = DEFAULT_ABORT;
-    test_g_args.disorderRatio = DEFAULT_RATIO;
-    test_g_args.disorderRange = DEFAULT_DISORDER_RANGE;
-    test_g_args.method_of_delete = DEFAULT_METHOD_DEL;
-    test_g_args.totalInsertRows = DEFAULT_TOTAL_INSERT;
-    test_g_args.totalAffectedRows = DEFAULT_TOTAL_AFFECT;
-    test_g_args.demo_mode = DEFAULT_DEMO_MODE;
-    test_g_args.chinese = DEFAULT_CHINESE_OPT;
-    test_g_args.pressure_mode = DEFAULT_PRESSURE_MODE;
+
+char* test_description(char* description, char* author, char* function,
+                       char* text) {
+    snprintf(description, MAX_DESCRIPTION_LEN,
+             "%s()\n\tAuthor: %s\n\tDescription: %s\n\tResult:", function,
+             author, text);
+    return description;
 }
-int  clean_suite1(void) { return 0; }
+int init_command_opt(void) {
+    init_g_args(&test_g_args);
+    return 0;
+}
+int clean_command_opt(void) {
+    clean_g_args(&test_g_args);
+    return 0;
+}
+
+void reload_g_args(void) {
+    clean_g_args(&test_g_args);
+    init_g_args(&test_g_args);
+}
 void testPARSE_ARGS(void) {
-    char* args[2] = {"taosdemo", "-E"};
-    CU_ASSERT_EQUAL(parse_args(2, args, &test_g_args), 0)
+    /*file*/
+    char* args_f[3] = {"taosdemo", "-f", "non-exist.json"};
+    CU_ASSERT_PTR_NULL(test_g_args.metaFile);
+    CU_ASSERT_EQUAL(parse_args(3, args_f, &test_g_args), 0);
+    CU_ASSERT_STRING_EQUAL(test_g_args.metaFile, "non-exist.json");
+    reload_g_args();
+    char* args_ff[2] = {"taosdemo", "-fnon-exist.json"};
+    CU_ASSERT_PTR_NULL(test_g_args.metaFile);
+    CU_ASSERT_EQUAL(parse_args(2, args_ff, &test_g_args), 0);
+    CU_ASSERT_STRING_EQUAL(test_g_args.metaFile, "non-exist.json");
+    reload_g_args();
+    char* args_file[3] = {"taosdemo", "--file", "non-exist.json"};
+    CU_ASSERT_PTR_NULL(test_g_args.metaFile);
+    CU_ASSERT_EQUAL(parse_args(3, args_file, &test_g_args), 0);
+    CU_ASSERT_STRING_EQUAL(test_g_args.metaFile, "non-exist.json");
+    reload_g_args();
+    char* args_ffile[2] = {"taosdemo", "--file=non-exist.json"};
+    CU_ASSERT_PTR_NULL(test_g_args.metaFile);
+    CU_ASSERT_EQUAL(parse_args(2, args_ffile, &test_g_args), 0);
+    CU_ASSERT_STRING_EQUAL(test_g_args.metaFile, "non-exist.json");
+    reload_g_args();
+    /*escape character*/
+    char* args_E[2] = {"taosdemo", "-E"};
+    CU_ASSERT_FALSE(test_g_args.escapeChar);
+    CU_ASSERT_EQUAL(parse_args(2, args_E, &test_g_args), 0);
+    CU_ASSERT_TRUE(test_g_args.escapeChar);
+    reload_g_args();
+    char* args_escape[2] = {"taosdemo", "--escape-character"};
+    CU_ASSERT_FALSE(test_g_args.escapeChar);
+    CU_ASSERT_EQUAL(parse_args(2, args_escape, &test_g_args), 0);
+    CU_ASSERT_TRUE(test_g_args.escapeChar);
+}
+
+void testQUERYSQLFILE(void) {
+    CU_ASSERT_EQUAL(querySqlFile(&test_g_args, "../test/correct_tmp.sql"), 0);
+    CU_ASSERT_EQUAL(querySqlFile(&test_g_args, "../test/wrong_tmp.sql"), -1);
 }
 
 int main() {
-    CU_pSuite pSuite = NULL;
+    CU_pSuite demoCommandOpt = NULL;
 
     /* initialize the CUnit test registry */
     if (CUE_SUCCESS != CU_initialize_registry()) return CU_get_error();
 
     /* add a suite to the registry */
-    pSuite = CU_add_suite("demoCommandOpt.c", init_suite1, clean_suite1);
-    if (NULL == pSuite) {
+    demoCommandOpt =
+        CU_add_suite("demoCommandOpt.c", init_command_opt, clean_command_opt);
+    if (NULL == demoCommandOpt) {
         CU_cleanup_registry();
         return CU_get_error();
     }
 
     /* add the tests to the suite */
-    /* NOTE - ORDER IS IMPORTANT - MUST TEST fread() AFTER fprintf() */
-    if ((NULL == CU_add_test(pSuite, "test of parse_args()", testPARSE_ARGS))) {
+    char parse_args_description[MAX_DESCRIPTION_LEN];
+    if ((NULL ==
+         CU_add_test(demoCommandOpt,
+                     test_description(
+                         parse_args_description, "zhaoyang", "parse_args",
+                         "This function read arguments from cmdline and save "
+                         "the argument info to the global variable g_args"),
+                     testPARSE_ARGS))) {
         CU_cleanup_registry();
         return CU_get_error();
     }
