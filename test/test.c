@@ -168,23 +168,34 @@ void testGENERATETAGS(void) {
 
 void testPREPAREDATAFROMCSV(void) {
     test_stbInfo->length_of_cols = 3 * INT_BUFF_LEN;
-    test_stbInfo->sampleDataBuf =
+    test_stbInfo->data_buffer =
         calloc(1, test_stbInfo->length_of_cols * g_data_size);
     strncpy(test_stbInfo->sampleFile, "non-exist.csv", MAX_FILE_NAME_LEN);
     CU_ASSERT_EQUAL(prepare_data_from_csv(test_stbInfo), -1);
     memset(test_stbInfo->sampleFile, 0, MAX_FILE_NAME_LEN);
     strncpy(test_stbInfo->sampleFile, "../test/test.csv", MAX_FILE_NAME_LEN);
     CU_ASSERT_EQUAL(prepare_data_from_csv(test_stbInfo), 0);
-    CU_ASSERT_STRING_EQUAL(test_stbInfo->sampleDataBuf, "1,2,3");
+    CU_ASSERT_STRING_EQUAL(test_stbInfo->data_buffer, "1,2,3");
     CU_ASSERT_STRING_EQUAL(
-        test_stbInfo->sampleDataBuf + test_stbInfo->length_of_cols, "1,2,3");
+        test_stbInfo->data_buffer + test_stbInfo->length_of_cols, "1,2,3");
     CU_ASSERT_STRING_EQUAL(
-        test_stbInfo->sampleDataBuf + 2 * test_stbInfo->length_of_cols,
-        "1,2,3");
-    tmfree(test_stbInfo->sampleDataBuf);
+        test_stbInfo->data_buffer + 2 * test_stbInfo->length_of_cols, "1,2,3");
+    tmfree(test_stbInfo->data_buffer);
 }
 
-void testCALCULATEROWLENGTH(void ) {
+void testPREPAREDATAFROMRAND(void) {
+    test_stbInfo->tagCount = 14;
+    test_stbInfo->columnCount = 14;
+    CU_ASSERT_EQUAL(calculate_row_length(test_stbInfo), 0);
+    test_stbInfo->data_buffer =
+        calloc(1, test_stbInfo->length_of_cols * g_data_size);
+    CU_ASSERT_EQUAL(prepare_data_from_rand(test_stbInfo), 0);
+    test_stbInfo->columnCount = 15;
+    test_stbInfo->columns[14].data_type = 100;
+    CU_ASSERT_EQUAL(prepare_data_from_rand(test_stbInfo), -1);
+}
+
+void testCALCULATEROWLENGTH(void) {
     test_stbInfo->tagCount = 14;
     test_stbInfo->columnCount = 14;
     CU_ASSERT_EQUAL(calculate_row_length(test_stbInfo), 0);
@@ -208,7 +219,8 @@ int main() {
         CU_add_suite("demoCommandOpt.c", init_command_opt, clean_command_opt);
     demoData = CU_add_suite("demoData.c", init_data, clean_data);
     demoInsert = CU_add_suite("demoInsert.c", init_data, clean_data);
-    if ((NULL == demoCommandOpt) || (NULL == demoData) || (NULL == demoInsert)) {
+    if ((NULL == demoCommandOpt) || (NULL == demoData) ||
+        (NULL == demoInsert)) {
         CU_cleanup_registry();
         return CU_get_error();
     }
@@ -216,8 +228,8 @@ int main() {
     char parse_args_description[MAX_DESCRIPTION_LEN];
     char query_sql_file[MAX_DESCRIPTION_LEN];
     char generate_sql_tags[MAX_DESCRIPTION_LEN];
-    // char generate_sql_cols[MAX_DESCRIPTION_LEN];
     char prepare_data_from_csv[MAX_DESCRIPTION_LEN];
+    char prepare_data_from_rand[MAX_DESCRIPTION_LEN];
     char calculate_row_length[MAX_DESCRIPTION_LEN];
     if ((NULL ==
          CU_add_test(
@@ -245,7 +257,14 @@ int main() {
              test_description(
                  prepare_data_from_csv, "zhaoyang", "prepare_data_from_csv",
                  "This function read and set data source from csv"),
-             testPREPAREDATAFROMCSV))||
+             testPREPAREDATAFROMCSV)) ||
+        (NULL ==
+         CU_add_test(
+             demoData,
+             test_description(
+                 prepare_data_from_rand, "zhaoyang", "prepare_data_from_rand",
+                 "This function generate random data as data source"),
+             testPREPAREDATAFROMRAND)) ||
         (NULL ==
          CU_add_test(
              demoInsert,

@@ -66,7 +66,7 @@
 #define RESP_BUF_LEN 4096
 #define SQL_BUFF_LEN 1024
 
-#define STR_INSERT_INTO "INSERT INTO "
+#define STR_INSERT_INTO "insert into"
 
 #define MAX_RECORDS_PER_REQ 32766
 
@@ -362,6 +362,7 @@ typedef struct SArguments_S {
     bool     demo_mode;  // use default column name and semi-random data
     bool     chinese;
     bool     pressure_mode;
+    char *   data_buffer;
 } SArguments;
 
 typedef struct SColumn_S {
@@ -413,7 +414,7 @@ typedef struct SSuperTable_S {
     uint64_t length_of_cols;
     uint64_t length_of_tags;
 
-    char *sampleDataBuf;
+    char *data_buffer;
     bool  useSampleTs;
 
     uint32_t tagSource;  // 0: rand, 1: tag sample
