@@ -43,6 +43,7 @@ extern char *    g_rand_phase_buff;
 extern char *    g_randdouble_buff;
 /***** Declare functions *****/
 int     init_rand_data();
+int     clean_rand_data();
 char *  rand_bool_str();
 int32_t rand_bool();
 char *  rand_tinyint_str();
@@ -70,8 +71,7 @@ void    rand_string(char *str, int size);
 char *  rand_double_str();
 double  rand_double();
 
-int     generateTagValuesForStb(SSuperTable *stbInfo, int64_t tableSeq,
-                                char *tagsValBuf);
+int generate_sql_tags(SSuperTable *stbInfo, int64_t tableSeq, char *tagsValBuf);
 int64_t getTSRandTail(int64_t timeStampStep, int32_t seq, int disorderRatio,
                       int disorderRange);
 int32_t prepareStbStmtBindTag(char *bindArray, SSuperTable *stbInfo,
@@ -97,17 +97,18 @@ int32_t generateStbProgressiveData(SSuperTable *stbInfo, char *tableName,
 int32_t generateProgressiveDataWithoutStb(
     char *tableName, threadInfo *pThreadInfo, char *buffer, int64_t insertRows,
     uint64_t recordFrom, int64_t startTime, int64_t *pRemainderBufLen);
-int64_t generateStbRowData(SSuperTable *stbInfo, char *recBuf,
-                           int64_t remainderBufLen, int64_t timestamp);
-int     prepareSampleForStb(SSuperTable *stbInfo);
-int     prepareSampleForNtb();
-int     parseSamplefileToStmtBatch(SSuperTable *stbInfo);
-int     parseStbSampleToStmtBatchForThread(threadInfo * pThreadInfo,
-                                           SSuperTable *stbInfo, uint32_t timePrec,
-                                           uint32_t batch);
-int     parseNtbSampleToStmtBatchForThread(threadInfo *pThreadInfo,
-                                           uint32_t timePrec, uint32_t batch);
-int     prepareSampleData();
+int generate_sql_cols(SSuperTable *stbInfo, char *recBuf, int64_t timestamp);
+int prepare_data_from_csv(SSuperTable *stbInfo);
+int prepare_data_from_rand(SSuperTable *stbInfo);
+int prepare_data(SSuperTable *stbInfo);
+int prepareSampleForNtb();
+int parseSamplefileToStmtBatch(SSuperTable *stbInfo);
+int parseStbSampleToStmtBatchForThread(threadInfo * pThreadInfo,
+                                       SSuperTable *stbInfo, uint32_t timePrec,
+                                       uint32_t batch);
+int parseNtbSampleToStmtBatchForThread(threadInfo *pThreadInfo,
+                                       uint32_t timePrec, uint32_t batch);
+int prepareSampleData();
 int32_t generateSmlConstPart(char *sml, SSuperTable *stbInfo,
                              threadInfo *pThreadInfo, int tbSeq);
 

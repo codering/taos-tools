@@ -14,6 +14,7 @@
  */
 
 #include "demo.h"
+int64_t        g_data_size = DEFAULT_DATA_SIZE;
 int64_t        g_totalChildTables = DEFAULT_CHILDTABLES;
 int64_t        g_actualChildTables = 0;
 FILE *         g_fpOfInsertResult = NULL;
@@ -25,6 +26,7 @@ SArguments     g_args;
 
 int main(int argc, char *argv[]) {
     init_g_args(&g_args);
+    g_args.info_print = true;
     if (parse_args(argc, argv, &g_args)) {
         exit(EXIT_FAILURE);
     }
@@ -55,7 +57,7 @@ int main(int argc, char *argv[]) {
         setParaFromArg(&g_args);
 
         if (NULL != g_args.sqlFile) {
-            if (querySqlFile(&g_args, g_args.sqlFile)) {
+            if (query_sql_file(&g_args, g_args.sqlFile)) {
                 exit(EXIT_FAILURE);
             }
         } else {

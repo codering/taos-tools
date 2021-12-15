@@ -16,128 +16,130 @@
 #include "demo.h"
 #include "demoData.h"
 
-static int calcRowLen(SSuperTable *superTbls) {
+int calculate_row_length(SSuperTable *superTbls) {
     int colIndex;
-    int lenOfOneRow = 0;
+    int length_of_cols = 0;
 
     for (colIndex = 0; colIndex < superTbls->columnCount; colIndex++) {
         char *dataType = superTbls->columns[colIndex].dataType;
 
         switch (superTbls->columns[colIndex].data_type) {
             case TSDB_DATA_TYPE_BINARY:
-                lenOfOneRow += superTbls->columns[colIndex].dataLen + 3;
+                length_of_cols += superTbls->columns[colIndex].dataLen + 3;
                 break;
 
             case TSDB_DATA_TYPE_NCHAR:
-                lenOfOneRow += superTbls->columns[colIndex].dataLen + 3;
+                length_of_cols += superTbls->columns[colIndex].dataLen + 3;
                 break;
 
             case TSDB_DATA_TYPE_INT:
             case TSDB_DATA_TYPE_UINT:
-                lenOfOneRow += INT_BUFF_LEN;
+                length_of_cols += INT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UBIGINT:
-                lenOfOneRow += BIGINT_BUFF_LEN;
+                length_of_cols += BIGINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_SMALLINT:
             case TSDB_DATA_TYPE_USMALLINT:
-                lenOfOneRow += SMALLINT_BUFF_LEN;
+                length_of_cols += SMALLINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_TINYINT:
             case TSDB_DATA_TYPE_UTINYINT:
-                lenOfOneRow += TINYINT_BUFF_LEN;
+                length_of_cols += TINYINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_BOOL:
-                lenOfOneRow += BOOL_BUFF_LEN;
+                length_of_cols += BOOL_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_FLOAT:
-                lenOfOneRow += FLOAT_BUFF_LEN;
+                length_of_cols += FLOAT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_DOUBLE:
-                lenOfOneRow += DOUBLE_BUFF_LEN;
+                length_of_cols += DOUBLE_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_TIMESTAMP:
-                lenOfOneRow += TIMESTAMP_BUFF_LEN;
+                length_of_cols += TIMESTAMP_BUFF_LEN;
                 break;
 
             default:
                 errorPrint("get error data type : %s\n", dataType);
-                exit(EXIT_FAILURE);
+                return -1;
         }
         if (superTbls->iface == SML_IFACE) {
-            lenOfOneRow += SML_LINE_SQL_SYNTAX_OFFSET;
+            length_of_cols += SML_LINE_SQL_SYNTAX_OFFSET;
         }
     }
 
-    superTbls->lenOfOneRow = lenOfOneRow + TIMESTAMP_BUFF_LEN;  // timestamp
+    superTbls->length_of_cols =
+        length_of_cols + TIMESTAMP_BUFF_LEN;  // timestamp
 
     int tagIndex;
-    int lenOfTagOfOneRow = 0;
+    int length_of_tags = 0;
     for (tagIndex = 0; tagIndex < superTbls->tagCount; tagIndex++) {
         char *dataType = superTbls->tags[tagIndex].dataType;
         switch (superTbls->tags[tagIndex].data_type) {
             case TSDB_DATA_TYPE_BINARY:
-                lenOfTagOfOneRow += superTbls->tags[tagIndex].dataLen + 3;
+                length_of_tags += superTbls->tags[tagIndex].dataLen + 3;
                 break;
             case TSDB_DATA_TYPE_NCHAR:
-                lenOfTagOfOneRow += superTbls->tags[tagIndex].dataLen + 3;
+                length_of_tags += superTbls->tags[tagIndex].dataLen + 3;
                 break;
             case TSDB_DATA_TYPE_INT:
             case TSDB_DATA_TYPE_UINT:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + INT_BUFF_LEN;
                 break;
+            case TSDB_DATA_TYPE_TIMESTAMP:
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UBIGINT:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + BIGINT_BUFF_LEN;
                 break;
             case TSDB_DATA_TYPE_SMALLINT:
             case TSDB_DATA_TYPE_USMALLINT:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + SMALLINT_BUFF_LEN;
                 break;
             case TSDB_DATA_TYPE_TINYINT:
             case TSDB_DATA_TYPE_UTINYINT:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + TINYINT_BUFF_LEN;
                 break;
             case TSDB_DATA_TYPE_BOOL:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + BOOL_BUFF_LEN;
                 break;
             case TSDB_DATA_TYPE_FLOAT:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + FLOAT_BUFF_LEN;
                 break;
             case TSDB_DATA_TYPE_DOUBLE:
-                lenOfTagOfOneRow +=
+                length_of_tags +=
                     superTbls->tags[tagIndex].dataLen + DOUBLE_BUFF_LEN;
                 break;
             default:
                 errorPrint("get error tag type : %s\n", dataType);
-                exit(EXIT_FAILURE);
+                return -1;
         }
         if (superTbls->iface == SML_IFACE) {
-            lenOfOneRow += SML_LINE_SQL_SYNTAX_OFFSET;
+            length_of_cols += SML_LINE_SQL_SYNTAX_OFFSET;
         }
     }
 
     if (superTbls->iface == SML_IFACE) {
-        lenOfTagOfOneRow +=
+        length_of_tags +=
             2 * TSDB_TABLE_NAME_LEN * 2 + SML_LINE_SQL_SYNTAX_OFFSET;
-        superTbls->lenOfOneRow += lenOfTagOfOneRow;
+        superTbls->length_of_cols += length_of_tags;
     }
 
-    superTbls->lenOfTagOfOneRow = lenOfTagOfOneRow;
+    superTbls->length_of_tags = length_of_tags;
 
     return 0;
 }
@@ -392,7 +394,7 @@ static int getSuperTableFromServer(TAOS *taos, char *dbName,
     superTbls->tagCount = tagIndex;
     taos_free_result(res);
 
-    calcRowLen(superTbls);
+    calculate_row_length(superTbls);
     return 0;
 }
 
@@ -401,7 +403,7 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
     char cols[COL_BUFFER_LEN] = "\0";
     int  len = 0;
 
-    int lenOfOneRow = 0;
+    int length_of_cols = 0;
 
     if (superTbl->columnCount == 0) {
         errorPrint("super table column count is %d\n", superTbl->columnCount);
@@ -414,14 +416,14 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s(%d)",
                                 colIndex, "BINARY",
                                 superTbl->columns[colIndex].dataLen);
-                lenOfOneRow += superTbl->columns[colIndex].dataLen + 3;
+                length_of_cols += superTbl->columns[colIndex].dataLen + 3;
                 break;
 
             case TSDB_DATA_TYPE_NCHAR:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s(%d)",
                                 colIndex, "NCHAR",
                                 superTbl->columns[colIndex].dataLen);
-                lenOfOneRow += superTbl->columns[colIndex].dataLen + 3;
+                length_of_cols += superTbl->columns[colIndex].dataLen + 3;
                 break;
 
             case TSDB_DATA_TYPE_INT:
@@ -432,31 +434,31 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
                     len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                     colIndex, "INT");
                 }
-                lenOfOneRow += INT_BUFF_LEN;
+                length_of_cols += INT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_BIGINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "BIGINT");
-                lenOfOneRow += BIGINT_BUFF_LEN;
+                length_of_cols += BIGINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_SMALLINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "SMALLINT");
-                lenOfOneRow += SMALLINT_BUFF_LEN;
+                length_of_cols += SMALLINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_TINYINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "TINYINT");
-                lenOfOneRow += TINYINT_BUFF_LEN;
+                length_of_cols += TINYINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_BOOL:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "BOOL");
-                lenOfOneRow += BOOL_BUFF_LEN;
+                length_of_cols += BOOL_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_FLOAT:
@@ -473,43 +475,43 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
                                     colIndex, "FLOAT");
                 }
 
-                lenOfOneRow += FLOAT_BUFF_LEN;
+                length_of_cols += FLOAT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_DOUBLE:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "DOUBLE");
-                lenOfOneRow += DOUBLE_BUFF_LEN;
+                length_of_cols += DOUBLE_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_TIMESTAMP:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "TIMESTAMP");
-                lenOfOneRow += TIMESTAMP_BUFF_LEN;
+                length_of_cols += TIMESTAMP_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_UTINYINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "TINYINT UNSIGNED");
-                lenOfOneRow += TINYINT_BUFF_LEN;
+                length_of_cols += TINYINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_USMALLINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "SMALLINT UNSIGNED");
-                lenOfOneRow += SMALLINT_BUFF_LEN;
+                length_of_cols += SMALLINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_UINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "INT UNSIGNED");
-                lenOfOneRow += INT_BUFF_LEN;
+                length_of_cols += INT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_UBIGINT:
                 len += snprintf(cols + len, COL_BUFFER_LEN - len, ",C%d %s",
                                 colIndex, "BIGINT UNSIGNED");
-                lenOfOneRow += BIGINT_BUFF_LEN;
+                length_of_cols += BIGINT_BUFF_LEN;
                 break;
 
             default:
@@ -520,7 +522,8 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
         }
     }
 
-    superTbl->lenOfOneRow = lenOfOneRow + TIMESTAMP_BUFF_LEN;  // timestamp
+    superTbl->length_of_cols =
+        length_of_cols + TIMESTAMP_BUFF_LEN;  // timestamp
 
     // save for creating child table
     superTbl->colsOfCreateChildTable =
@@ -545,7 +548,7 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
     int  tagIndex;
     len = 0;
 
-    int lenOfTagOfOneRow = 0;
+    int length_of_tags = 0;
     len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "(");
     for (tagIndex = 0; tagIndex < superTbl->tagCount; tagIndex++) {
         char *dataType = superTbl->tags[tagIndex].dataType;
@@ -560,12 +563,12 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
                                 "T%d %s(%d),", tagIndex, "BINARY",
                                 superTbl->tags[tagIndex].dataLen);
             }
-            lenOfTagOfOneRow += superTbl->tags[tagIndex].dataLen + 3;
+            length_of_tags += superTbl->tags[tagIndex].dataLen + 3;
         } else if (strcasecmp(dataType, "NCHAR") == 0) {
             len +=
                 snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s(%d),",
                          tagIndex, "NCHAR", superTbl->tags[tagIndex].dataLen);
-            lenOfTagOfOneRow += superTbl->tags[tagIndex].dataLen + 3;
+            length_of_tags += superTbl->tags[tagIndex].dataLen + 3;
         } else if (strcasecmp(dataType, "INT") == 0) {
             if ((g_args.demo_mode) && (tagIndex == 0)) {
                 len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len,
@@ -574,60 +577,58 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
                 len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                                 tagIndex, "INT");
             }
-            lenOfTagOfOneRow += superTbl->tags[tagIndex].dataLen + INT_BUFF_LEN;
+            length_of_tags += superTbl->tags[tagIndex].dataLen + INT_BUFF_LEN;
         } else if (strcasecmp(dataType, "BIGINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "BIGINT");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + BIGINT_BUFF_LEN;
         } else if (strcasecmp(dataType, "SMALLINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "SMALLINT");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + SMALLINT_BUFF_LEN;
         } else if (strcasecmp(dataType, "TINYINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "TINYINT");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + TINYINT_BUFF_LEN;
         } else if (strcasecmp(dataType, "BOOL") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "BOOL");
-            lenOfTagOfOneRow +=
-                superTbl->tags[tagIndex].dataLen + BOOL_BUFF_LEN;
+            length_of_tags += superTbl->tags[tagIndex].dataLen + BOOL_BUFF_LEN;
         } else if (strcasecmp(dataType, "FLOAT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "FLOAT");
-            lenOfTagOfOneRow +=
-                superTbl->tags[tagIndex].dataLen + FLOAT_BUFF_LEN;
+            length_of_tags += superTbl->tags[tagIndex].dataLen + FLOAT_BUFF_LEN;
         } else if (strcasecmp(dataType, "DOUBLE") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "DOUBLE");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + DOUBLE_BUFF_LEN;
         } else if (strcasecmp(dataType, "UTINYINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "TINYINT UNSIGNED");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + TINYINT_BUFF_LEN;
         } else if (strcasecmp(dataType, "USMALLINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "SMALLINT UNSIGNED");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + SMALLINT_BUFF_LEN;
         } else if (strcasecmp(dataType, "UINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "INT UNSIGNED");
-            lenOfTagOfOneRow += superTbl->tags[tagIndex].dataLen + INT_BUFF_LEN;
+            length_of_tags += superTbl->tags[tagIndex].dataLen + INT_BUFF_LEN;
         } else if (strcasecmp(dataType, "UBIGINT") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "BIGINT UNSIGNED");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + BIGINT_BUFF_LEN;
         } else if (strcasecmp(dataType, "TIMESTAMP") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "T%d %s,",
                             tagIndex, "TIMESTAMP");
-            lenOfTagOfOneRow +=
+            length_of_tags +=
                 superTbl->tags[tagIndex].dataLen + TIMESTAMP_BUFF_LEN;
         } else if (strcasecmp(dataType, "JSON") == 0) {
             len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, "jtag json ");
@@ -642,7 +643,7 @@ static int createSuperTable(TAOS *taos, char *dbName, SSuperTable *superTbl,
     len -= 1;
     len += snprintf(tags + len, TSDB_MAX_TAGS_LEN - len, ")");
 
-    superTbl->lenOfTagOfOneRow = lenOfTagOfOneRow;
+    superTbl->length_of_tags = length_of_tags;
 
     snprintf(command, BUFFER_SIZE,
              superTbl->escapeChar
@@ -860,14 +861,14 @@ static void *createTable(void *sarg) {
                 }
 
                 if (0 == stbInfo->tagSource) {
-                    if (generateTagValuesForStb(stbInfo, i, tagsValBuf)) {
+                    if (generate_sql_tags(stbInfo, i, tagsValBuf)) {
                         tmfree(tagsValBuf);
                         goto create_table_end;
                     }
                 } else {
                     snprintf(tagsValBuf, TSDB_MAX_SQL_LEN, "(%s)",
                              stbInfo->tagDataBuf +
-                                 stbInfo->lenOfTagOfOneRow *
+                                 stbInfo->length_of_tags *
                                      (i % stbInfo->tagSampleCount));
                 }
                 len += snprintf(
@@ -882,7 +883,7 @@ static void *createTable(void *sarg) {
                 batchNum++;
                 if ((batchNum < stbInfo->batchCreateTableNum) &&
                     ((buff_len - len) >=
-                     (stbInfo->lenOfTagOfOneRow + EXTRA_SQL_LEN))) {
+                     (stbInfo->length_of_tags + EXTRA_SQL_LEN))) {
                     continue;
                 }
             }
@@ -1132,35 +1133,7 @@ void postFreeResource() {
         tmfree(g_Dbs.db[i].superTbls);
     }
     tmfree(g_Dbs.db);
-    tmfree(g_randbool_buff);
-    tmfree(g_randint_buff);
-    tmfree(g_rand_voltage_buff);
-    tmfree(g_randbigint_buff);
-    tmfree(g_randsmallint_buff);
-    tmfree(g_randtinyint_buff);
-    tmfree(g_randfloat_buff);
-    tmfree(g_rand_current_buff);
-    tmfree(g_rand_phase_buff);
-    tmfree(g_randdouble_buff);
-    tmfree(g_randuint_buff);
-    tmfree(g_randutinyint_buff);
-    tmfree(g_randusmallint_buff);
-    tmfree(g_randubigint_buff);
-    tmfree(g_randint);
-    tmfree(g_randuint);
-    tmfree(g_randbigint);
-    tmfree(g_randubigint);
-    tmfree(g_randfloat);
-    tmfree(g_randdouble);
-    tmfree(g_sampleDataBuf);
-
-    for (int l = 0; l < g_args.columnCount; l++) {
-        if (g_sampleBindBatchArray) {
-            tmfree((char *)((uintptr_t) * (uintptr_t *)(g_sampleBindBatchArray +
-                                                        sizeof(char *) * l)));
-        }
-    }
-    tmfree(g_sampleBindBatchArray);
+    clean_rand_data();
     clean_g_args(&g_args);
 }
 
@@ -1540,7 +1513,7 @@ int32_t prepareStbStmt(threadInfo *pThreadInfo, char *tableName,
 
     if (AUTO_CREATE_SUBTBL == stbInfo->autoCreateTable) {
         if (0 == stbInfo->tagSource) {
-            if (generateTagValuesForStb(stbInfo, tableSeq, tagsValBuf)) {
+            if (generate_sql_tags(stbInfo, tableSeq, tagsValBuf)) {
                 tmfree(tagsValBuf);
                 tmfree(tagsArray);
                 return -1;
@@ -1548,7 +1521,7 @@ int32_t prepareStbStmt(threadInfo *pThreadInfo, char *tableName,
         } else {
             snprintf(
                 tagsValBuf, TSDB_MAX_SQL_LEN, "(%s)",
-                stbInfo->tagDataBuf + stbInfo->lenOfTagOfOneRow *
+                stbInfo->tagDataBuf + stbInfo->length_of_tags *
                                           (tableSeq % stbInfo->tagSampleCount));
         }
 
@@ -2087,7 +2060,7 @@ static void *syncWriteInterlaceSml(threadInfo *pThreadInfo,
         }
 
         for (int t = 0; t < pThreadInfo->ntables; t++) {
-            char *sml = (char *)calloc(1, stbInfo->lenOfOneRow);
+            char *sml = (char *)calloc(1, stbInfo->length_of_cols);
             if (NULL == sml) {
                 errorPrint("%s", "failed to allocate memory\n");
                 goto free_smlheadlist_interlace_sml;
@@ -2105,7 +2078,7 @@ static void *syncWriteInterlaceSml(threadInfo *pThreadInfo,
         }
 
         for (int i = 0; i < g_args.reqPerReq; i++) {
-            pThreadInfo->lines[i] = calloc(1, stbInfo->lenOfOneRow);
+            pThreadInfo->lines[i] = calloc(1, stbInfo->length_of_cols);
             if (NULL == pThreadInfo->lines[i]) {
                 errorPrint("%s", "failed to allocate memory\n");
                 goto free_lines_interlace_sml;
@@ -2519,7 +2492,7 @@ void *syncWriteProgressive(threadInfo *pThreadInfo) {
                         break;
                     }
 
-                    if (maxSqlLen - len < stbInfo->lenOfOneRow + 32) {
+                    if (maxSqlLen - len < stbInfo->length_of_cols + 32) {
                         break;
                     }
                 }
@@ -2683,7 +2656,7 @@ void *syncWriteProgressiveSml(threadInfo *pThreadInfo) {
             goto free_of_progressive_sml;
         }
         for (int t = 0; t < pThreadInfo->ntables; t++) {
-            char *sml = (char *)calloc(1, stbInfo->lenOfOneRow);
+            char *sml = (char *)calloc(1, stbInfo->length_of_cols);
             if (NULL == sml) {
                 errorPrint("%s", "failed to allocate memory\n");
                 goto free_smlheadlist_progressive_sml;
@@ -2702,7 +2675,7 @@ void *syncWriteProgressiveSml(threadInfo *pThreadInfo) {
         }
 
         for (int i = 0; i < g_args.reqPerReq; i++) {
-            pThreadInfo->lines[i] = (char *)calloc(1, stbInfo->lenOfOneRow);
+            pThreadInfo->lines[i] = (char *)calloc(1, stbInfo->length_of_cols);
             if (NULL == pThreadInfo->lines[i]) {
                 errorPrint("%s", "failed to allocate memory\n");
                 goto free_lines_progressive_sml;
@@ -2919,7 +2892,7 @@ int startMultiThreadInsertData(int threads, char *db_name, char *precision,
                 stbInfo->tsPrecision = TSDB_SML_TIMESTAMP_NOT_CONFIGURED;
             }
             if (stbInfo->lineProtocol != TSDB_SML_JSON_PROTOCOL) {
-                calcRowLen(stbInfo);
+                calculate_row_length(stbInfo);
             }
         }
     }
@@ -2948,7 +2921,7 @@ int startMultiThreadInsertData(int threads, char *db_name, char *precision,
     int ret = 0;
     if (stbInfo) {
         if (stbInfo->iface != SML_IFACE) {
-            ret = prepareSampleForStb(stbInfo);
+            ret = prepare_data(stbInfo);
         }
     } else {
         ret = prepareSampleForNtb();

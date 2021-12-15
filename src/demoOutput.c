@@ -423,7 +423,7 @@ void printfInsertMeta() {
     printf("max sql length:             \033[33m%" PRIu64 "\033[0m\n",
            g_args.max_sql_len);
     printf("random prepare data:        \033[33m%" PRId64 "\033[0m\n",
-           g_args.prepared_rand);
+           g_data_size);
     printf("chinese:                    \033[33m%s\033[0m\n",
            g_args.chinese ? "yes" : "no");
 

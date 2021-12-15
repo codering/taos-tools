@@ -43,6 +43,7 @@ void init_g_args(SArguments *pg_args) {
     pg_args->use_metric = DEFAULT_USE_METRIC;
     pg_args->drop_database = DEFAULT_DROP_DB;
     pg_args->aggr_func = DEFAULT_AGGR_FUNC;
+    pg_args->info_print = DEFAULT_INFO;
     pg_args->debug_print = DEFAULT_DEBUG;
     pg_args->verbose_print = DEFAULT_VERBOSE;
     pg_args->performance_print = DEFAULT_PERF_STAT;
@@ -65,12 +66,11 @@ void init_g_args(SArguments *pg_args) {
     pg_args->data_length[2] = 4;
     pg_args->binwidth = DEFAULT_BINWIDTH;
     pg_args->columnCount = DEFAULT_COL_COUNT;
-    pg_args->lenOfOneRow = DEFAULT_LEN_ONE_ROW;
+    pg_args->length_of_cols = DEFAULT_LEN_ONE_ROW;
     pg_args->nthreads = DEFAULT_NTHREADS;
     pg_args->insert_interval = DEFAULT_INSERT_INTERVAL;
     pg_args->timestamp_step = DEFAULT_TIMESTAMP_STEP;
     pg_args->query_times = DEFAULT_QUERY_TIME;
-    pg_args->prepared_rand = DEFAULT_PREPARED_RAND;
     pg_args->interlaceRows = DEFAULT_INTERLACE_ROWS;
     pg_args->reqPerReq = DEFAULT_REQ_PER_REQ;
     pg_args->max_sql_len = TSDB_MAX_ALLOWED_SQL_LEN;
@@ -1262,51 +1262,51 @@ int parse_args(int argc, char *argv[], SArguments *pg_args) {
         }
     }
 
-    pg_args->lenOfOneRow = TIMESTAMP_BUFF_LEN;  // timestamp
+    pg_args->length_of_cols = TIMESTAMP_BUFF_LEN;  // timestamp
     for (int c = 0; c < pg_args->columnCount - 1; c++) {
         switch (pg_args->data_type[c]) {
             case TSDB_DATA_TYPE_BINARY:
-                pg_args->lenOfOneRow += pg_args->binwidth + 3;
+                pg_args->length_of_cols += pg_args->binwidth + 3;
                 break;
 
             case TSDB_DATA_TYPE_NCHAR:
-                pg_args->lenOfOneRow += pg_args->binwidth + 3;
+                pg_args->length_of_cols += pg_args->binwidth + 3;
                 break;
 
             case TSDB_DATA_TYPE_INT:
             case TSDB_DATA_TYPE_UINT:
-                pg_args->lenOfOneRow += INT_BUFF_LEN;
+                pg_args->length_of_cols += INT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_BIGINT:
             case TSDB_DATA_TYPE_UBIGINT:
-                pg_args->lenOfOneRow += BIGINT_BUFF_LEN;
+                pg_args->length_of_cols += BIGINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_SMALLINT:
             case TSDB_DATA_TYPE_USMALLINT:
-                pg_args->lenOfOneRow += SMALLINT_BUFF_LEN;
+                pg_args->length_of_cols += SMALLINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_TINYINT:
             case TSDB_DATA_TYPE_UTINYINT:
-                pg_args->lenOfOneRow += TINYINT_BUFF_LEN;
+                pg_args->length_of_cols += TINYINT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_BOOL:
-                pg_args->lenOfOneRow += BOOL_BUFF_LEN;
+                pg_args->length_of_cols += BOOL_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_FLOAT:
-                pg_args->lenOfOneRow += FLOAT_BUFF_LEN;
+                pg_args->length_of_cols += FLOAT_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_DOUBLE:
-                pg_args->lenOfOneRow += DOUBLE_BUFF_LEN;
+                pg_args->length_of_cols += DOUBLE_BUFF_LEN;
                 break;
 
             case TSDB_DATA_TYPE_TIMESTAMP:
-                pg_args->lenOfOneRow += TIMESTAMP_BUFF_LEN;
+                pg_args->length_of_cols += TIMESTAMP_BUFF_LEN;
                 break;
 
             default:
@@ -1407,7 +1407,7 @@ void setParaFromArg(SArguments *pg_args) {
     tstrncpy(g_Dbs.resultFile, pg_args->output_file, MAX_FILE_NAME_LEN);
 
     g_Dbs.use_metric = pg_args->use_metric;
-    pg_args->prepared_rand = min(pg_args->insertRows, MAX_PREPARED_RAND);
+    g_data_size = min(pg_args->insertRows, MAX_PREPARED_RAND);
     g_Dbs.aggr_func = pg_args->aggr_func;
 
     char     dataString[TSDB_MAX_BYTES_PER_ROW];
@@ -1586,7 +1586,7 @@ void setParaFromArg(SArguments *pg_args) {
     }
 }
 
-int querySqlFile(SArguments *pg_args, char *sqlFile) {
+int query_sql_file(SArguments *pg_args, char *sqlFile) {
     int32_t code = -1;
     FILE *  fp = fopen(sqlFile, "r");
     char *  cmd = calloc(1, TSDB_MAX_BYTES_PER_ROW);
@@ -1632,7 +1632,7 @@ int querySqlFile(SArguments *pg_args, char *sqlFile) {
     }
 
     t = taosGetTimestampMs() - t;
-    printf("run %s took %.6f second(s)\n\n", sqlFile, t / 1000000);
+    infoPrint("run %s took %.6f second(s)\n\n", sqlFile, t / 1000000);
     code = 0;
 free_of_query_sql_file:
     taos_close(taos);

@@ -447,9 +447,9 @@ int getMetaFromInsertJsonFile(cJSON *root) {
                 __func__, __LINE__);
             goto PARSE_OVER;
         }
-        g_args.prepared_rand = prepareRand->valueint;
+        g_data_size = prepareRand->valueint;
     } else if (!prepareRand) {
-        g_args.prepared_rand = DEFAULT_PREPARED_RAND;
+        g_data_size = DEFAULT_DATA_SIZE;
     } else {
         errorPrint("%s", "failed to read json, prepared_rand not found\n");
         goto PARSE_OVER;

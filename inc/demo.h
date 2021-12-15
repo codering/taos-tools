@@ -142,6 +142,7 @@
 #define DEFAULT_AGGR_FUNC false
 #define DEFAULT_DEBUG false
 #define DEFAULT_VERBOSE false
+#define DEFAULT_INFO true
 #define DEFAULT_PERF_STAT false
 #define DEFAULT_ANS_YES false
 #define DEFAULT_OUTPUT "./output.txt"
@@ -157,7 +158,7 @@
 #define DEFAULT_LEN_ONE_ROW 76
 #define DEFAULT_INSERT_INTERVAL 0
 #define DEFAULT_QUERY_TIME 1
-#define DEFAULT_PREPARED_RAND 10000
+#define DEFAULT_DATA_SIZE 10000
 #define DEFAULT_REQ_PER_REQ 30000
 #define DEFAULT_INSERT_ROWS 10000
 #define DEFAULT_ABORT 0
@@ -179,6 +180,23 @@
 #define __func__ __FUNCTION__
 #endif
 
+#define infoPrint(fmt, ...)                                                   \
+    do {                                                                      \
+        if (g_args.info_print) {                                              \
+            struct tm      Tm, *ptm;                                          \
+            struct timeval timeSecs;                                          \
+            time_t         curTime;                                           \
+            gettimeofday(&timeSecs, NULL);                                    \
+            curTime = timeSecs.tv_sec;                                        \
+            ptm = localtime_r(&curTime, &Tm);                                 \
+            fprintf(stderr, "%02d/%02d %02d:%02d:%02d.%06d %08" PRId64 " ",   \
+                    ptm->tm_mon + 1, ptm->tm_mday, ptm->tm_hour, ptm->tm_min, \
+                    ptm->tm_sec, (int32_t)timeSecs.tv_usec,                   \
+                    taosGetSelfPthreadId());                                  \
+            errorPrint(fmt, __VA_ARGS__);                                     \
+        }                                                                     \
+    } while (0)
+
 #define debugPrint(fmt, ...)                            \
     do {                                                \
         if (g_args.debug_print || g_args.verbose_print) \
@@ -196,12 +214,14 @@
             fprintf(stderr, "PERF: " fmt, __VA_ARGS__); \
     } while (0)
 
-#define errorPrint(fmt, ...)                            \
-    do {                                                \
-        fprintf(stderr, "\033[31m");                    \
-        fprintf(stderr, "%s(%d) ", __FILE__, __LINE__); \
-        fprintf(stderr, "ERROR: " fmt, __VA_ARGS__);    \
-        fprintf(stderr, "\033[0m");                     \
+#define errorPrint(fmt, ...)                                \
+    do {                                                    \
+        if (g_args.info_print) {                            \
+            fprintf(stderr, "\033[31m");                    \
+            fprintf(stderr, "%s(%d) ", __FILE__, __LINE__); \
+            fprintf(stderr, "ERROR: " fmt, __VA_ARGS__);    \
+            fprintf(stderr, "\033[0m");                     \
+        }                                                   \
     } while (0)
 
 enum TEST_MODE {
@@ -312,6 +332,7 @@ typedef struct SArguments_S {
     bool     drop_database;
     bool     aggr_func;
     bool     answer_yes;
+    bool     info_print;
     bool     debug_print;
     bool     verbose_print;
     bool     performance_print;
@@ -322,12 +343,11 @@ typedef struct SArguments_S {
     int32_t *data_length;
     uint32_t binwidth;
     uint32_t columnCount;
-    uint64_t lenOfOneRow;
+    uint64_t length_of_cols;
     uint32_t nthreads;
     uint64_t insert_interval;
     uint64_t timestamp_step;
     int64_t  query_times;
-    int64_t  prepared_rand;
     uint32_t interlaceRows;
     uint32_t reqPerReq;  // num_of_records_per_req
     uint64_t max_sql_len;
@@ -390,8 +410,8 @@ typedef struct SSuperTable_S {
     char *   childTblName;
     bool     escapeChar;
     char *   colsOfCreateChildTable;
-    uint64_t lenOfOneRow;
-    uint64_t lenOfTagOfOneRow;
+    uint64_t length_of_cols;
+    uint64_t length_of_tags;
 
     char *sampleDataBuf;
     bool  useSampleTs;
@@ -591,6 +611,7 @@ extern char *         g_aggreFuncDemo[];
 extern char *         g_aggreFunc[];
 extern SArguments     g_args;
 extern SDbs           g_Dbs;
+extern int64_t        g_data_size;
 extern char *         g_dupstr;
 extern int64_t        g_totalChildTables;
 extern int64_t        g_actualChildTables;
@@ -610,7 +631,7 @@ extern char           configDir[];
 void init_g_args(SArguments *pg_args);
 int  parse_args(int argc, char *argv[], SArguments *pg_args);
 void setParaFromArg(SArguments *pg_args);
-int  querySqlFile(SArguments *pg_args, char *sqlFile);
+int  query_sql_file(SArguments *pg_args, char *sqlFile);
 void testCmdLine(SArguments *pg_args);
 void clean_g_args(SArguments *pg_args);
 /* demoJsonOpt.c */
@@ -658,6 +679,7 @@ int     getChildNameOfSuperTableWithLimitAndOffset(TAOS *taos, char *dbName,
 /* demoInsert.c */
 int  insertTestProcess();
 void postFreeResource();
+int  calculate_row_length(SSuperTable *superTbls);
 /* demoOutput.c */
 void printVersion();
 void printfInsertMeta();
