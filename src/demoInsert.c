@@ -2335,135 +2335,6 @@ free_of_interlace_sml:
     return code;
 }
 
-void *syncWriteProgressiveStmt(threadInfo *pThreadInfo) {
-    debugPrint("%s() LN%d: ### stmt progressive write\n", __func__, __LINE__);
-    int32_t *code = calloc(1, sizeof(int32_t));
-    *code = -1;
-    SSuperTable *stbInfo = pThreadInfo->stbInfo;
-    int64_t      timeStampStep =
-        stbInfo ? stbInfo->timeStampStep : g_args.timestamp_step;
-    int64_t insertRows = (stbInfo) ? stbInfo->insertRows : g_args.insertRows;
-    verbosePrint("%s() LN%d insertRows=%" PRId64 "\n", __func__, __LINE__,
-                 insertRows);
-
-    uint64_t lastPrintTime = taosGetTimestampMs();
-    uint64_t startTs = taosGetTimestampMs();
-    uint64_t endTs;
-
-    pThreadInfo->totalInsertRows = 0;
-    pThreadInfo->totalAffectedRows = 0;
-
-    pThreadInfo->samplePos = 0;
-
-    int     percentComplete = 0;
-    int64_t totalRows = insertRows * pThreadInfo->ntables;
-
-    for (uint64_t tableSeq = pThreadInfo->start_table_from;
-         tableSeq <= pThreadInfo->end_table_to; tableSeq++) {
-        int64_t start_time = pThreadInfo->start_time;
-
-        for (uint64_t i = 0; i < insertRows;) {
-            char tableName[TSDB_TABLE_NAME_LEN];
-            getTableName(tableName, pThreadInfo, tableSeq);
-            verbosePrint("%s() LN%d: tid=%d seq=%" PRId64 " tableName=%s\n",
-                         __func__, __LINE__, pThreadInfo->threadID, tableSeq,
-                         tableName);
-            if (0 == strlen(tableName)) {
-                errorPrint("[%d] %s() LN%d, getTableName return null\n",
-                           pThreadInfo->threadID, __func__, __LINE__);
-                goto free_of_stmt_progressive;
-            }
-
-            // measure prepare + insert
-            startTs = taosGetTimestampUs();
-
-            int32_t generated;
-            if (stbInfo) {
-                generated = prepareStbStmt(
-                    pThreadInfo, tableName, tableSeq,
-                    (uint32_t)((g_args.reqPerReq > stbInfo->insertRows)
-                                   ? stbInfo->insertRows
-                                   : g_args.reqPerReq),
-                    insertRows, i, start_time, &(pThreadInfo->samplePos));
-            } else {
-                generated = prepareStmtWithoutStb(pThreadInfo, tableName,
-                                                  g_args.reqPerReq, insertRows,
-                                                  i, start_time);
-            }
-
-            verbosePrint("[%d] %s() LN%d generated=%d\n", pThreadInfo->threadID,
-                         __func__, __LINE__, generated);
-
-            if (generated > 0)
-                i += generated;
-            else
-                goto free_of_stmt_progressive;
-
-            start_time += generated * timeStampStep;
-            pThreadInfo->totalInsertRows += generated;
-
-            // only measure insert
-            // startTs = taosGetTimestampUs();
-
-            int32_t affectedRows = execInsert(pThreadInfo, generated);
-
-            endTs = taosGetTimestampUs();
-            uint64_t delay = endTs - startTs;
-            performancePrint("%s() LN%d, insert execution time is %10.f ms\n",
-                             __func__, __LINE__, delay / 1000.0);
-            verbosePrint("[%d] %s() LN%d affectedRows=%d\n",
-                         pThreadInfo->threadID, __func__, __LINE__,
-                         affectedRows);
-
-            if (delay > pThreadInfo->maxDelay) pThreadInfo->maxDelay = delay;
-            if (delay < pThreadInfo->minDelay) pThreadInfo->minDelay = delay;
-            pThreadInfo->cntDelay++;
-            pThreadInfo->totalDelay += delay;
-
-            if (affectedRows < 0) {
-                errorPrint("affected rows: %d\n", affectedRows);
-                goto free_of_stmt_progressive;
-            }
-
-            pThreadInfo->totalAffectedRows += affectedRows;
-
-            int currentPercent =
-                (int)(pThreadInfo->totalAffectedRows * 100 / totalRows);
-            if (currentPercent > percentComplete) {
-                printf("[%d]:%d%%\n", pThreadInfo->threadID, currentPercent);
-                percentComplete = currentPercent;
-            }
-            int64_t currentPrintTime = taosGetTimestampMs();
-            if (currentPrintTime - lastPrintTime > 30 * 1000) {
-                printf("thread[%d] has currently inserted rows: %" PRId64
-                       ", affected rows: %" PRId64 "\n",
-                       pThreadInfo->threadID, pThreadInfo->totalInsertRows,
-                       pThreadInfo->totalAffectedRows);
-                lastPrintTime = currentPrintTime;
-            }
-
-            if (i >= insertRows) break;
-        }  // insertRows
-
-        if ((g_args.verbose_print) && (tableSeq == pThreadInfo->ntables - 1) &&
-            (stbInfo) &&
-            (0 ==
-             strncasecmp(stbInfo->dataSource, "sample", strlen("sample")))) {
-            verbosePrint("%s() LN%d samplePos=%" PRId64 "\n", __func__,
-                         __LINE__, pThreadInfo->samplePos);
-        }
-    }  // tableSeq
-
-    if (percentComplete < 100) {
-        printf("[%d]:%d%%\n", pThreadInfo->threadID, percentComplete);
-    }
-    *code = 0;
-    printStatPerThread(pThreadInfo);
-free_of_stmt_progressive:
-    tmfree(pThreadInfo->buffer);
-    return code;
-}
-
 void *syncWriteProgressive(threadInfo *pThreadInfo) {
     debugPrint("%s() LN%d: ### progressive write\n", __func__, __LINE__);
     int32_t *code = calloc(1, sizeof(int32_t));
@@ -2853,11 +2724,8 @@ void *syncWrite(void *sarg) {
         }
     } else {
         // progressive mode
-        if (((stbInfo) && (STMT_IFACE == stbInfo->iface)) ||
-            (STMT_IFACE == g_args.iface)) {
-            return syncWriteProgressiveStmt(pThreadInfo);
-        } else if (((stbInfo) && (SML_IFACE == stbInfo->iface)) ||
-                   (SML_IFACE == g_args.iface)) {
+        if (((stbInfo) && (SML_IFACE == stbInfo->iface)) ||
+            (SML_IFACE == g_args.iface)) {
             return syncWriteProgressiveSml(pThreadInfo);
         } else {
             return syncWriteProgressive(pThreadInfo);
